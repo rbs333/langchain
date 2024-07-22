@@ -4,6 +4,10 @@ from langchain_core.stores import ByteStore
 
 from langchain_community.utilities.redis import get_client
 
+from langchain_core.documents import Document
+
+import pickle
+
 
 class RedisStore(ByteStore):
     """BaseStore implementation using Redis as the underlying store.
@@ -115,11 +119,13 @@ class RedisStore(ByteStore):
             self.client.mget([self._get_prefixed_key(key) for key in keys]),
         )
 
-    def mset(self, key_value_pairs: Sequence[Tuple[str, bytes]]) -> None:
+    def mset(self, key_value_pairs: Sequence[Tuple[str, bytes | Document]]) -> None:
         """Set the given key-value pairs."""
         pipe = self.client.pipeline()
 
         for key, value in key_value_pairs:
+            if isinstance(value, Document):
+                value = pickle.dumps(value)
             pipe.set(self._get_prefixed_key(key), value, ex=self.ttl)
         pipe.execute()
 
